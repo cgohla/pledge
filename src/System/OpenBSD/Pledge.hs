@@ -21,9 +21,12 @@ import           System.OpenBSD.Pledge.Internal (Promise (..), pledge)
 
 -- Here goes the fun stuff, i.e., the type level API
 
--- TODO this is probably an 'indexed monad'. perhaps use graded monads defined in monad-effect
+-- TODO this is probably an 'indexed monad'. perhaps use graded monads
+-- defined in monad-effect. ADD actually, there should only be a
+-- graded monad instance if the wrapped value is in a monad.
+
 -- TODO write example programs
-data Pledge (ps :: [Promise]) a = Pledge a
+newtype Pledge (ps :: [Promise]) a = Pledge { getAction :: a }
 
 -- | Extract a value level list of promises, whithouf running the action.
 getPromises :: (CollectPromise ps) => Pledge ps a -> [Promise]
