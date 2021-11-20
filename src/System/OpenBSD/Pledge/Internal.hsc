@@ -3,13 +3,11 @@ module System.OpenBSD.Pledge.Internal (Promise(..), pledge) where
 import System.OpenBSD.Pledge.Promise.Type (Promise(..), promiseToString)
 
 import           Control.Monad    (void)
-import qualified Data.Char        as C (toLower)
 import           Data.List        (intercalate)
 import           Data.Set         (Set)
 import qualified Data.Set         as S (toList)
 import           Foreign.C.String (CString, newCString)
 import Control.Monad.IO.Class (liftIO, MonadIO)
-import Language.Haskell.TH (Dec(..), mkName, Q)
 
 empty :: IO CString
 empty = newCString ""

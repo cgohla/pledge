@@ -11,8 +11,8 @@
 module System.OpenBSD.Pledge where
 
 import           Control.Monad.IO.Class         (MonadIO, liftIO)
-import           Control.Monad.Writer           (WriterT, runWriterT)
-import           Control.Monad.Writer.Class     (MonadWriter, tell)
+-- import           Control.Monad.Writer           (WriterT, runWriterT) -- TODO use a writer to collect promises
+-- import           Control.Monad.Writer.Class     (MonadWriter, tell)
 import qualified Data.Set                       as S (fromList)
 import           Language.Haskell.TH            (Body (..), Con (..), Dec (..),
                                                  Exp (..), Info (..), Pat (..),
@@ -24,53 +24,51 @@ import           System.OpenBSD.Pledge.Internal (Promise (..), pledge)
 
 -- TODO this is probably an 'indexed monad'. perhaps use graded monads defined in monad-effect
 -- TODO write example programs
-data PledgeIOT (ps :: [Promise]) m a = PledgeIOT (m a)
+data Pledge (ps :: [Promise]) a = Pledge a
 
 -- | Extract a value level list of promises, whithouf running the action.
-getPromises :: (CollectPromise ps, Monad m) => PledgeIOT ps (WriterT [Promise] m) a -> m [Promise] -- TODO accidentally seems to run the action anyway
-getPromises = fmap snd . runWriterT . collectPromise
+getPromises :: (CollectPromise ps) => Pledge ps a -> [Promise]
+getPromises = fst . collectPromise
 
 -- | Apply all promises using pledge(2) and execute the action. Note
 -- that there is no way to revert promises, hence anything run after
 -- this is subject to the same restrictions. So this should be the
 -- last call in main.
-runPledge :: (MonadIO m, CollectPromise ps) => PledgeIOT ps (WriterT [Promise] m) a -> m a
+runPledge :: (MonadIO m, CollectPromise ps) => Pledge ps (m a) -> m a
 runPledge p = do
-  (a, w) <- runWriterT $ collectPromise p
-  pledge $ S.fromList w
-  pure a
+  let (ps, a) = collectPromise p
+  pledge $ S.fromList ps
+  a
 
 -- | Example action
-pledgePutStrLn :: (MonadIO m) => String -> PledgeIOT '[ 'Stdio ] m ()
-pledgePutStrLn = PledgeIOT . liftIO . putStrLn
+pledgePutStrLn :: (MonadIO m) => String -> Pledge '[ 'Stdio ] (m ())
+pledgePutStrLn = Pledge . liftIO . putStrLn
 
--- | Broken action. This should crash the program
-pledgePutStrLn' :: (MonadIO m) => String -> PledgeIOT '[ ] m () -- TODO but it doesn't. Same problem as 'getPromises'
-pledgePutStrLn' = PledgeIOT . liftIO . putStrLn
+-- | Broken action. This should crash the program because no promise
+-- is declared, even though 'Stdio' is needed to print to std out.
+pledgePutStrLn' :: (MonadIO m) => String -> Pledge '[ ] (m ())
+pledgePutStrLn' = Pledge . liftIO . putStrLn
 
 class CollectPromise ps where
-  collectPromise :: (MonadWriter [Promise] m)
-                 => PledgeIOT ps m a
-                 -> m a
+  collectPromise :: Pledge ps a -> ([Promise], a)
 
 instance CollectPromise '[] where
-  collectPromise (PledgeIOT b) = b
+  collectPromise (Pledge a) = ([], a)
+
+popPromise :: SingPromise p => Pledge (p ': ps) a -> (SPromise p, Pledge ps a) -- Q: do we absolutely need the signature?
+popPromise (Pledge a) = (sing, Pledge a)
 
 instance (ConcretePromise p, SingPromise p, CollectPromise ps) => CollectPromise (p ': ps) where
-  collectPromise p = do
-    let (sp, ps) = popPromise p
-    tell $ pure $ concrete sp
-    collectPromise ps
-      where
-        popPromise :: SingPromise p => PledgeIOT (p ': ps) m a -> (SPromise p, PledgeIOT ps m a)
-        popPromise (PledgeIOT a) = (sing, PledgeIOT a)
+  collectPromise p = (pr:ps, a)
+    where
+      (sp, p') = popPromise p
+      (ps, a) = collectPromise p'
+      pr = concrete sp
 
 data family SPromise (p :: Promise) :: *
 
 class ConcretePromise (p :: Promise) where
   concrete :: SPromise p -> Promise
-
--- sing needs to be a type class method giving the unique constructor of SPromise p for each p
 
 class SingPromise (p :: Promise) where
   sing :: SPromise p
