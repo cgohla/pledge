@@ -11,8 +11,7 @@
 module System.OpenBSD.Pledge where
 
 import           Control.Monad.IO.Class         (MonadIO, liftIO)
--- import           Control.Monad.Writer           (WriterT, runWriterT) -- TODO use a writer to collect promises
--- import           Control.Monad.Writer.Class     (MonadWriter, tell)
+import           Control.Monad.Writer.Class     (tell)
 import qualified Data.Set                       as S (fromList)
 import           Language.Haskell.TH            (Body (..), Con (..), Dec (..),
                                                  Exp (..), Info (..), Pat (..),
@@ -55,15 +54,14 @@ class CollectPromise ps where
 instance CollectPromise '[] where
   collectPromise (Pledge a) = ([], a)
 
-popPromise :: SingPromise p => Pledge (p ': ps) a -> (SPromise p, Pledge ps a) -- Q: do we absolutely need the signature?
+popPromise :: SingPromise p => Pledge (p ': ps) a -> (SPromise p, Pledge ps a)
 popPromise (Pledge a) = (sing, Pledge a)
 
 instance (ConcretePromise p, SingPromise p, CollectPromise ps) => CollectPromise (p ': ps) where
-  collectPromise p = (pr:ps, a)
-    where
-      (sp, p') = popPromise p
-      (ps, a) = collectPromise p'
-      pr = concrete sp
+  collectPromise p = do
+    let (sp, p') = popPromise p
+    tell $ pure $ concrete sp
+    collectPromise p'
 
 data family SPromise (p :: Promise) :: *
 
