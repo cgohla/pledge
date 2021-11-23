@@ -1,15 +1,18 @@
-{-# LANGUAGE ConstraintKinds   #-}
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE KindSignatures    #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TypeFamilies      #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE ConstraintKinds      #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE KindSignatures       #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE PolyKinds            #-}
+{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE UndecidableInstances #-}
 module System.OpenBSD.Pledge where
 
+import           Control.Effect                 (Effect, Inv, Plus, Unit, return, (>>=))
 import           Control.Monad.IO.Class         (MonadIO, liftIO)
 import           Control.Monad.Writer.Class     (tell)
 import qualified Data.Set                       as S (fromList)
@@ -26,38 +29,49 @@ import           System.OpenBSD.Pledge.Internal (Promise (..), pledge)
 -- graded monad instance if the wrapped value is in a monad.
 
 -- TODO write example programs
-newtype Pledge (ps :: [Promise]) a = Pledge { getAction :: a }
+newtype Pledge m (ps :: [Promise]) a = Pledge { getAction :: m a }
+
+type family Concat (ps :: [a]) (ps' :: [a]) :: [a]
+type instance Concat '[] ps = ps
+type instance Concat (p ': ps) ps' = (p ': Concat ps ps')
+
+instance (Monad m) => Effect (Pledge m) where
+  type instance Unit (Pledge m) = '[]
+  type instance Plus (Pledge m) ps ps' = Concat ps ps'
+  type instance Inv (Pledge m) _ _ = Monad m
+  return = Pledge . Prelude.return
+  (>>=) (Pledge a) f = Pledge $ a Prelude.>>= (getAction . f)
 
 -- | Extract a value level list of promises, whithouf running the action.
-getPromises :: (CollectPromise ps) => Pledge ps a -> [Promise]
+getPromises :: (CollectPromise ps) => Pledge m ps a -> [Promise]
 getPromises = fst . collectPromise
 
 -- | Apply all promises using pledge(2) and execute the action. Note
 -- that there is no way to revert promises, hence anything run after
 -- this is subject to the same restrictions. So this should be the
 -- last call in main.
-runPledge :: (MonadIO m, CollectPromise ps) => Pledge ps (m a) -> m a
+runPledge :: (MonadIO m, CollectPromise ps) => Pledge m ps a -> m a
 runPledge p = do
   let (ps, a) = collectPromise p
   pledge $ S.fromList ps
   a
 
 -- | Example action
-pledgePutStrLn :: (MonadIO m) => String -> Pledge '[ 'Stdio ] (m ())
+pledgePutStrLn :: (MonadIO m) => String -> Pledge m '[ 'Stdio ] ()
 pledgePutStrLn = Pledge . liftIO . putStrLn
 
 -- | Broken action. This should crash the program because no promise
 -- is declared, even though 'Stdio' is needed to print to std out.
-pledgePutStrLn' :: (MonadIO m) => String -> Pledge '[ ] (m ())
+pledgePutStrLn' :: (MonadIO m) => String -> Pledge m '[ ] ()
 pledgePutStrLn' = Pledge . liftIO . putStrLn
 
 class CollectPromise ps where
-  collectPromise :: Pledge ps a -> ([Promise], a)
+  collectPromise :: Pledge m ps a -> ([Promise], m a)
 
 instance CollectPromise '[] where
   collectPromise (Pledge a) = ([], a)
 
-popPromise :: SingPromise p => Pledge (p ': ps) a -> (SPromise p, Pledge ps a)
+popPromise :: SingPromise p => Pledge m (p ': ps) a -> (SPromise p, Pledge m ps a)
 popPromise (Pledge a) = (sing, Pledge a)
 
 instance (ConcretePromise p, SingPromise p, CollectPromise ps) => CollectPromise (p ': ps) where
