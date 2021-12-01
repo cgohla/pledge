@@ -10,9 +10,12 @@
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
-module System.OpenBSD.Pledge where
+module System.OpenBSD.Pledge(runPledge, module I, Pledge(..), pledgePutStrLn) where
 
-import           Control.Effect                 (Effect, Inv, Plus, Unit, return, (>>=))
+import Data.Text (Text)
+import qualified Data.Text.IO as T (putStrLn)
+import           Control.Effect                 (Effect, Inv, Plus, Unit,
+                                                 return, (>>=))
 import           Control.Monad.IO.Class         (MonadIO, liftIO)
 import           Control.Monad.Writer.Class     (tell)
 import qualified Data.Set                       as S (fromList)
@@ -20,7 +23,7 @@ import           Language.Haskell.TH            (Body (..), Con (..), Dec (..),
                                                  Exp (..), Info (..), Pat (..),
                                                  Q, Type (..), mkName, nameBase,
                                                  reify)
-import           System.OpenBSD.Pledge.Internal (Promise (..), pledge)
+import           System.OpenBSD.Pledge.Internal as I (Promise (..), pledge)
 
 -- Here goes the fun stuff, i.e., the type level API
 
@@ -29,7 +32,14 @@ import           System.OpenBSD.Pledge.Internal (Promise (..), pledge)
 -- graded monad instance if the wrapped value is in a monad.
 
 -- TODO write example programs
-newtype Pledge m (ps :: [Promise]) a = Pledge { getAction :: m a }
+newtype Pledge m (ps :: [Promise]) a = Pledge { getAction :: m a } 
+
+instance Functor m => Functor (Pledge m ps) where
+  fmap f (Pledge a) = Pledge $ fmap f a
+
+instance (Applicative m) => Applicative (Pledge m ps) where
+  pure = Pledge . pure
+  (<*>) (Pledge f) (Pledge a) = Pledge $ f <*> a
 
 type family Concat (ps :: [a]) (ps' :: [a]) :: [a]
 type instance Concat '[] ps = ps
@@ -57,13 +67,13 @@ runPledge p = do
   a
 
 -- | Example action
-pledgePutStrLn :: (MonadIO m) => String -> Pledge m '[ 'Stdio ] ()
-pledgePutStrLn = Pledge . liftIO . putStrLn
+pledgePutStrLn :: (MonadIO m) => Text -> Pledge m '[ 'Stdio ] ()
+pledgePutStrLn = Pledge . liftIO . T.putStrLn
 
 -- | Broken action. This should crash the program because no promise
 -- is declared, even though 'Stdio' is needed to print to std out.
-pledgePutStrLn' :: (MonadIO m) => String -> Pledge m '[ ] ()
-pledgePutStrLn' = Pledge . liftIO . putStrLn
+pledgePutStrLn' :: (MonadIO m) => Text -> Pledge m '[ ] ()
+pledgePutStrLn' = Pledge . liftIO . T.putStrLn
 
 class CollectPromise ps where
   collectPromise :: Pledge m ps a -> ([Promise], m a)
