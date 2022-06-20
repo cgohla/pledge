@@ -12,27 +12,20 @@
 {-# LANGUAGE UndecidableInstances #-}
 module System.OpenBSD.Pledge(runPledge, module I, Pledge(..), pledgePutStrLn, CollectPromises, getPromises, Concat) where
 
-import Data.Text (Text)
-import qualified Data.Text.IO as T (putStrLn)
 import           Control.Effect                 (Effect, Inv, Plus, Unit,
                                                  return, (>>=))
 import           Control.Monad.IO.Class         (MonadIO, liftIO)
 import           Control.Monad.Writer.Class     (tell)
 import qualified Data.Set                       as S (fromList)
+import           Data.Text                      (Text)
+import qualified Data.Text.IO                   as T (putStrLn)
 import           Language.Haskell.TH            (Body (..), Con (..), Dec (..),
                                                  Exp (..), Info (..), Pat (..),
                                                  Q, Type (..), mkName, nameBase,
                                                  reify)
 import           System.OpenBSD.Pledge.Internal as I (Promise (..), pledge)
 
--- Here goes the fun stuff, i.e., the type level API
-
--- TODO this is probably an 'indexed monad'. perhaps use graded monads
--- defined in monad-effect. ADD actually, there should only be a
--- graded monad instance if the wrapped value is in a monad.
-
--- TODO write example programs
-newtype Pledge m (ps :: [Promise]) a = Pledge { getAction :: m a } 
+newtype Pledge m (ps :: [Promise]) a = Pledge { getAction :: m a }
 
 instance Functor m => Functor (Pledge m ps) where
   fmap f (Pledge a) = Pledge $ fmap f a

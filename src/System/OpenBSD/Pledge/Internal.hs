@@ -14,9 +14,6 @@ import           Foreign.C.String                   (CString, newCString)
 empty :: IO CString
 empty = newCString ""
 
--- TODO define pledge constants as byte strings
--- figure out how to turn those into cstrings
-
 pledge :: (MonadIO m) => Set Promise -> m ()
 pledge = liftIO . pledgeString . intercalate " " . fmap promiseToString . S.toList
 
