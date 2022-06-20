@@ -1,11 +1,14 @@
-`pledge(2)` is an OpenBSD system call that allows a user space process
-to reduce the set of available system calls. OpenBSD defines a set of
-capabilities called _promises_. The argument to the `pledge` call is a
-space separated string containing the names of the promises the
-process wishes to retain; any promise not mentioned is
-disabled. Importantly, once dropped, a promise can not be reinstated
-during the lifetime of the process, the set of promises can however be
-reduced in successive steps.
+# Introduction #
+
+[`pledge(2)`](https://man.openbsd.org/pledge.2) is an OpenBSD system
+call that allows a user space process to reduce the set of available
+system calls. OpenBSD defines a set of capabilities called
+_promises_. The argument to the `pledge` call is a space separated
+string containing the names of the promises the process wishes to
+retain; any promise not mentioned is disabled. Importantly, once
+dropped, a promise can not be reinstated during the lifetime of the
+process, the set of promises can however be reduced in successive
+steps.
 
 The purpose of this mechanism is to reduce the potential for exploits.
 
@@ -17,6 +20,8 @@ minimality or sufficiency of the result.
 We present here a type level API in Haskell that can help automate
 this process. There are two steps to using it.
 
+# Examples #
+
 Consider
 
 ```haskell
@@ -25,7 +30,7 @@ Data.Text.IO.putStrLn :: Text -> IO ()
 
 from the `text` package. This will print the given text to the
 standard output, ultimately using the `write(2)` system call. Using
-`write(2)` on an already open file (stdout in this case) is allowed
+`write(2)` on an already open file (`stdout` in this case) is allowed
 under the `stdio` promise. Using the `Pledge` higher type we can lift
 `putStrLn` to a type that tracks the need for this promise as follows:
 
@@ -98,3 +103,20 @@ would amount to a substantial rewrite of `base`.
 We emphasize that the correctness (i.e., minimality and sufficiency)
 of the promise set for the whole program depends on correctly
 annotating the constituent actions.
+
+# Caveats #
+
+As mentioned, for now this package targets OpenBSD specifically. Linux
+has a similar facility called
+[`seccomp`](https://www.man7.org/linux/man-pages//man2/seccomp.2.html),
+which is much more complex, and hence potentially more difficult to
+use (correctly). In the future we might try to provide a way to
+translate our constraints to `seccomp`.
+
+Note that this package uses a version of
+[`effect-monad`](https://github.com/dorchard/effect-monad) that is as
+of yet unavailable on hackage. So if you want to use it, you will have
+to make your own fork, and add it to your cabal project file.
+
+Note furthermore that this design has not actually been used in a
+serious application.

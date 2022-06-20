@@ -17,7 +17,10 @@ maintainer:         b.gohla@gmx.de
 -- A copyright notice.
 -- copyright:
 -- category:
-extra-source-files: CHANGELOG.md
+extra-source-files:
+  CHANGELOG.md
+  README.md
+  TODO.md
 
 executable effect
   main-is:          Main.hs
