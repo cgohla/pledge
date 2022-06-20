@@ -1,2 +1,3 @@
 	* [ ] Add a combinator to drop promises not needed later
-	* [ ] Make this part of the bind action (not clear how this will work type wise)	
+	* [ ] Make this part of the bind action (not clear how this will work type wise)
+	* [ ] Add coverage for the `unveil` facility
