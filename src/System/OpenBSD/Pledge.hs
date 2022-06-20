@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
-module System.OpenBSD.Pledge(runPledge, module I, Pledge(..), pledgePutStrLn) where
+module System.OpenBSD.Pledge(runPledge, module I, Pledge(..), pledgePutStrLn, CollectPromises, getPromises, Concat) where
 
 import Data.Text (Text)
 import qualified Data.Text.IO as T (putStrLn)
@@ -53,14 +53,14 @@ instance (Monad m) => Effect (Pledge m) where
   (>>=) (Pledge a) f = Pledge $ a Prelude.>>= (getAction . f)
 
 -- | Extract a value level list of promises, whithouf running the action.
-getPromises :: (CollectPromise ps) => Pledge m ps a -> [Promise]
+getPromises :: (CollectPromises ps) => Pledge m ps a -> [Promise]
 getPromises = fst . collectPromise
 
 -- | Apply all promises using pledge(2) and execute the action. Note
 -- that there is no way to revert promises, hence anything run after
 -- this is subject to the same restrictions. So this should be the
 -- last call in main.
-runPledge :: (MonadIO m, CollectPromise ps) => Pledge m ps a -> m a
+runPledge :: (MonadIO m, CollectPromises ps) => Pledge m ps a -> m a
 runPledge p = do
   let (ps, a) = collectPromise p
   pledge $ S.fromList ps
@@ -75,16 +75,16 @@ pledgePutStrLn = Pledge . liftIO . T.putStrLn
 pledgePutStrLn' :: (MonadIO m) => Text -> Pledge m '[ ] ()
 pledgePutStrLn' = Pledge . liftIO . T.putStrLn
 
-class CollectPromise ps where
+class CollectPromises ps where
   collectPromise :: Pledge m ps a -> ([Promise], m a)
 
-instance CollectPromise '[] where
+instance CollectPromises '[] where
   collectPromise (Pledge a) = ([], a)
 
 popPromise :: SingPromise p => Pledge m (p ': ps) a -> (SPromise p, Pledge m ps a)
 popPromise (Pledge a) = (sing, Pledge a)
 
-instance (ConcretePromise p, SingPromise p, CollectPromise ps) => CollectPromise (p ': ps) where
+instance (ConcretePromise p, SingPromise p, CollectPromises ps) => CollectPromises (p ': ps) where
   collectPromise p = do
     let (sp, p') = popPromise p
     tell $ pure $ concrete sp
