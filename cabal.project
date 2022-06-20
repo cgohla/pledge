@@ -1,0 +1,7 @@
+packages: .
+
+source-repository-package
+        type: git
+        location: git@github.com:cgohla/effect-monad.git
+        tag: e5e4ef7ed739561ff4e1ac2e2ec9e2aaefa9db87
+
