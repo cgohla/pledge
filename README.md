@@ -104,6 +104,12 @@ We emphasize that the correctness (i.e., minimality and sufficiency)
 of the promise set for the whole program depends on correctly
 annotating the constituent actions.
 
+# Outlook #
+
+A goal that is not implemented so far, is to drop promises not just
+once, at the beginning of program execution, but instead, drop a
+promise as soon as we know it will not be needed during execution.
+
 # Caveats #
 
 As mentioned, for now this package targets OpenBSD specifically. Linux
