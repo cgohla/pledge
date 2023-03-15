@@ -1,2 +1,4 @@
 * TODO Add coverage for the `unveil` facility
 * TODO Think about multi threading
+* TODO Eliminate redundant pledge calls
+* TODO Use type level sets instead of lists

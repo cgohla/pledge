@@ -29,11 +29,11 @@ license:            MIT
 category:           Security, OpenBSD
 extra-source-files:
   CHANGELOG.md
-  README.md
-  TODO.md
   examples/basic/demo1.c
   examples/basic/Makefile
   examples/basic/README.md
+  README.md
+  TODO.md
 
 source-repository head
   type:     git
@@ -63,14 +63,31 @@ executable demo
   hs-source-dirs:   examples/haskell/app
   default-language: Haskell2010
 
+executable multipledge
+  main-is:          Main.hs
+  build-depends:
+    , base        >=4 && <5
+    , containers
+    , pledge
+    , text
+    , directory
+
+  ghc-options:      -Wall
+  hs-source-dirs:   examples/multipledge
+  default-language: Haskell2010
+
 library
   build-tool-depends: hsc2hs:hsc2hs -any
   default-language:   Haskell2010
   build-depends:
     , base              >=4 && <5
     , containers
+    , directory
     , effect-monad
     , mtl
+    , singletons
+    , singletons-base
+    , singletons-th
     , template-haskell
     , text
     , transformers
@@ -78,6 +95,7 @@ library
   ghc-options:        -Wall
   hs-source-dirs:     src
   exposed-modules:
+    System.OpenBSD.MultiPledge
     System.OpenBSD.Pledge
     System.OpenBSD.Pledge.Internal
 
