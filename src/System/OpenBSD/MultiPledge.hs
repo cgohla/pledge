@@ -1,9 +1,10 @@
-{-# LANGUAGE QualifiedDo              #-}
 {-# LANGUAGE DataKinds                #-}
 {-# LANGUAGE DeriveFunctor            #-}
+{-# LANGUAGE FlexibleContexts         #-}
 {-# LANGUAGE GADTs                    #-}
 {-# LANGUAGE KindSignatures           #-}
 {-# LANGUAGE PolyKinds                #-}
+{-# LANGUAGE QualifiedDo              #-}
 {-# LANGUAGE ScopedTypeVariables      #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell          #-}
@@ -19,10 +20,11 @@ module System.OpenBSD.MultiPledge ( trivial
                                   , (System.OpenBSD.MultiPledge.>>)
                                   ) where
 
+import           Data.Set.Singletons
 import           System.OpenBSD.Pledge.Internal as I (Promise (..), pledge)
 
 import           Control.Monad.IO.Class         (MonadIO)
-import           Data.List.Singletons
+-- import           Data.List.Singletons           hiding (Union)
 import qualified Data.Set                       as S
 import           Data.Singletons                (SingI, fromSing, sing)
 
@@ -56,25 +58,25 @@ trivial = Pledge
 bind :: forall m zs ps qs a b.
         (MonadIO m, SingI zs, SingI ps, SingI qs)
      => (a -> Pledge m zs ps b)
-     -> Pledge m (zs ++ ps) {- concat order? -} qs a
-     -> Pledge m zs (ps ++ qs) b
+     -> Pledge m (zs `Union` ps) {- concat order? -} qs a
+     -> Pledge m zs (ps `Union` qs) b
 bind f a = Pledge $ do
   a' <- getAction a
-  pledge $ S.fromList $ fromSing $ sing @zs %++ sing @ps
+  pledge $ S.fromList $ fromSing $ sing @zs `union` sing @ps
   getAction $ f a'
 
 (>>=) :: forall m zs ps qs a b.
         (MonadIO m, SingI zs, SingI ps, SingI qs)
-     => Pledge m (zs ++ ps) {- concat order? -} qs a
+     => Pledge m (zs `Union` ps) {- concat order? -} qs a
      -> (a -> Pledge m zs ps b)
-     -> Pledge m zs (ps ++ qs) b
+     -> Pledge m zs (ps `Union` qs) b
 (>>=) = flip bind
 
 (>>) :: forall m zs ps qs a b.
         (MonadIO m, SingI zs, SingI ps, SingI qs)
-     => Pledge m (zs ++ ps) {- concat order? -} qs a
+     => Pledge m (zs `Union` ps) {- concat order? -} qs a
      -> Pledge m zs ps b
-     -> Pledge m zs (ps ++ qs) b
+     -> Pledge m zs (ps `Union` qs) b
 (>>) a a' = a System.OpenBSD.MultiPledge.>>= (const a')
 
 -- | Run the pledged action after shrinking the promise set to

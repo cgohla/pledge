@@ -1,8 +1,8 @@
 {-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE QualifiedDo       #-}
 {-# LANGUAGE KindSignatures    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds         #-}
+{-# LANGUAGE QualifiedDo       #-}
 module Main where
 
 import           Control.Monad.IO.Class
@@ -25,6 +25,6 @@ pledgeGetLine = Pledge $ liftIO $ T.getLine
 main :: IO ()
 main = runPledge $ M.do
   l <- pledgeGetLine
-  fs <- pledgeGetDirectoryContents "/"
-  pledgePutStrLn $ "hello" <> l
-  traverse_ _ fs
+  fs <- fmap (fmap T.pack) $ pledgeGetDirectoryContents "/"
+  pledgePutStrLn $ "hello " <> l
+  fmap mconcat $ traverse pledgePutStrLn fs
