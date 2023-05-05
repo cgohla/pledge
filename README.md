@@ -70,8 +70,11 @@ As mentioned, for now this package targets OpenBSD specifically. Linux
 has a similar facility called
 [`seccomp`](https://www.man7.org/linux/man-pages//man2/seccomp.2.html),
 which is much more complex, and hence potentially more difficult to
-use (correctly). In the future we might try to provide a way to
-translate our constraints to `seccomp`.
+use (correctly).
+
+There is a [compatibility layer](https://justine.lol/pledge/) that can
+apparently translate OpenBSD promises to eBPF for seccomp on
+Linux. This might be a way to make this package somewhat portable.
 
 Note that this package uses a version of
 [`effect-monad`](https://github.com/dorchard/effect-monad) that is as
