@@ -33,7 +33,6 @@ extra-source-files:
   examples/basic/Makefile
   examples/basic/README.md
   README.md
-  TODO.md
 
 source-repository head
   type:     git
@@ -68,9 +67,10 @@ executable multipledge
   build-depends:
     , base        >=4 && <5
     , containers
+    , directory
     , pledge
     , text
-    , directory
+    , singletons
 
   ghc-options:      -Wall
   hs-source-dirs:   examples/multipledge
@@ -91,10 +91,12 @@ library
     , template-haskell
     , text
     , transformers
+    , type-level-sets
 
   ghc-options:        -Wall
   hs-source-dirs:     src
   exposed-modules:
+    Data.Set.Singletons
     System.OpenBSD.MultiPledge
     System.OpenBSD.Pledge
     System.OpenBSD.Pledge.Internal

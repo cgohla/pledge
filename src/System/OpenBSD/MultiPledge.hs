@@ -1,9 +1,10 @@
-{-# LANGUAGE QualifiedDo              #-}
 {-# LANGUAGE DataKinds                #-}
-{-# LANGUAGE DeriveFunctor            #-}
+{-# LANGUAGE DeriveTraversable        #-}
+{-# LANGUAGE FlexibleContexts         #-}
 {-# LANGUAGE GADTs                    #-}
 {-# LANGUAGE KindSignatures           #-}
 {-# LANGUAGE PolyKinds                #-}
+{-# LANGUAGE QualifiedDo              #-}
 {-# LANGUAGE ScopedTypeVariables      #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell          #-}
@@ -12,17 +13,16 @@
 {-# LANGUAGE TypeOperators            #-}
 
 module System.OpenBSD.MultiPledge ( trivial
-                                  , bind
                                   , runPledge
                                   , Pledge (..)
                                   , (System.OpenBSD.MultiPledge.>>=)
                                   , (System.OpenBSD.MultiPledge.>>)
                                   ) where
 
+import           Data.Set.Singletons
 import           System.OpenBSD.Pledge.Internal as I (Promise (..), pledge)
 
 import           Control.Monad.IO.Class         (MonadIO)
-import           Data.List.Singletons
 import qualified Data.Set                       as S
 import           Data.Singletons                (SingI, fromSing, sing)
 
@@ -34,11 +34,12 @@ newtype Pledge m -- ^ The underlying monad. Combinators will require
      (ps :: [Promise]) -- ^ The promises required by this action
      a
   = Pledge { getAction :: m a }
-  deriving (Functor)
+  deriving (Functor, Foldable, Traversable)
 
 instance (Functor m, Applicative m) => Applicative (Pledge m zs ps) where
-  pure = Pledge . pure -- ^ Idealy we should avoid using this, because
-                       -- it inflates the promise set
+  pure = Pledge . pure -- ^ Unsing this should be avoided, because it
+                       -- add promises to an otherwise pure
+                       -- computation.
   (<*>) (Pledge f) (Pledge a) = Pledge $ f <*> a
 
 -- | Wrap an action that requires no promises
@@ -51,34 +52,29 @@ trivial = Pledge
 -- nullary action includes those required by the unary one.
 --
 -- Before executing the unary action, this executes a 'pledge' call to
--- shrink the promises to 'zs ++ ps', i.e., those required by it and
--- any later actions.
-bind :: forall m zs ps qs a b.
-        (MonadIO m, SingI zs, SingI ps, SingI qs)
-     => (a -> Pledge m zs ps b)
-     -> Pledge m (zs ++ ps) {- concat order? -} qs a
-     -> Pledge m zs (ps ++ qs) b
-bind f a = Pledge $ do
+-- shrink the promises to 'zs `Union` ps', i.e., those required by it
+-- and any later actions.
+(>>=) :: forall m zs ps qs a b.
+        ( MonadIO m, SingI zs, SingI ps, SingI qs
+        )
+     => Pledge m (zs `Union` ps) qs a
+     -> (a -> Pledge m zs ps b)
+     -> Pledge m zs (ps `Union` qs) b
+(>>=) a f = Pledge $ do
   a' <- getAction a
-  pledge $ S.fromList $ fromSing $ sing @zs %++ sing @ps
+  pledge $ S.fromList $ fromSing $ sing @zs `sUnion` sing @ps
   getAction $ f a'
 
-(>>=) :: forall m zs ps qs a b.
-        (MonadIO m, SingI zs, SingI ps, SingI qs)
-     => Pledge m (zs ++ ps) {- concat order? -} qs a
-     -> (a -> Pledge m zs ps b)
-     -> Pledge m zs (ps ++ qs) b
-(>>=) = flip bind
-
 (>>) :: forall m zs ps qs a b.
-        (MonadIO m, SingI zs, SingI ps, SingI qs)
-     => Pledge m (zs ++ ps) {- concat order? -} qs a
+        ( MonadIO m, SingI zs, SingI ps, SingI qs-- ,
+        )
+     => Pledge m (zs `Union` ps) qs a
      -> Pledge m zs ps b
-     -> Pledge m zs (ps ++ qs) b
+     -> Pledge m zs (ps `Union` qs) b
 (>>) a a' = a System.OpenBSD.MultiPledge.>>= (const a')
 
 -- | Run the pledged action after shrinking the promise set to
--- 'ps'. Note how we are forzing the 'zs' parameter to '[]'.
+-- 'ps'. Note how we are forcing the 'zs' parameter to '[]'.
 runPledge :: forall m ps a.
              (SingI ps, MonadIO m)
           => Pledge m '[] ps a
