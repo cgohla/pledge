@@ -1,4 +1,6 @@
-* TODO Add coverage for the `unveil` facility
-* TODO Think about multi threading
+* TODO Define more type classes
 * TODO Eliminate redundant pledge calls
 * TODO Use type level sets instead of lists
+** TODO See if promise sets can be joined statically
+* TODO Add coverage for the `unveil` facility
+* TODO Think about multi threading
