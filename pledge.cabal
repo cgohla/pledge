@@ -92,6 +92,7 @@ library
     , text
     , transformers
     , type-level-sets
+    , transformers-base
 
   ghc-options:        -Wall
   hs-source-dirs:     src

@@ -1,4 +1,5 @@
-* TODO Define more type classes
+* DONE Define more type classes
+** TODO See if we can add MonadBaseControlTrans, and maybe that solves the WAI app runner problem
 * TODO Eliminate redundant pledge calls
 * TODO Use type level sets instead of lists
 ** TODO See if promise sets can be joined statically
