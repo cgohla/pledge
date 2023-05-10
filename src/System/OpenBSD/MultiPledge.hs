@@ -1,16 +1,21 @@
-{-# LANGUAGE DataKinds                #-}
-{-# LANGUAGE DeriveTraversable        #-}
-{-# LANGUAGE FlexibleContexts         #-}
-{-# LANGUAGE GADTs                    #-}
-{-# LANGUAGE KindSignatures           #-}
-{-# LANGUAGE PolyKinds                #-}
-{-# LANGUAGE QualifiedDo              #-}
-{-# LANGUAGE ScopedTypeVariables      #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
-{-# LANGUAGE TemplateHaskell          #-}
-{-# LANGUAGE TypeApplications         #-}
-{-# LANGUAGE TypeFamilies             #-}
-{-# LANGUAGE TypeOperators            #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveTraversable          #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures             #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE PolyKinds                  #-}
+{-# LANGUAGE QualifiedDo                #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE StandaloneKindSignatures   #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 module System.OpenBSD.MultiPledge ( trivial
                                   , runPledge
@@ -22,7 +27,9 @@ module System.OpenBSD.MultiPledge ( trivial
 import           Data.Set.Singletons
 import           System.OpenBSD.Pledge.Internal as I (Promise (..), pledge)
 
+import           Control.Monad.Base             (MonadBase)
 import           Control.Monad.IO.Class         (MonadIO)
+import           Control.Monad.Trans.Class      (MonadTrans, lift)
 import qualified Data.Set                       as S
 import           Data.Singletons                (SingI, fromSing, sing)
 
@@ -36,11 +43,16 @@ newtype Pledge m -- ^ The underlying monad. Combinators will require
   = Pledge { getAction :: m a }
   deriving (Functor, Foldable, Traversable)
 
-instance (Functor m, Applicative m) => Applicative (Pledge m zs ps) where
-  pure = Pledge . pure -- ^ Unsing this should be avoided, because it
-                       -- add promises to an otherwise pure
-                       -- computation.
-  (<*>) (Pledge f) (Pledge a) = Pledge $ f <*> a
+deriving newtype instance (Monad m) => Monad (Pledge m zs ps)
+deriving newtype instance (Applicative m) => Applicative (Pledge m zs ps)
+deriving newtype instance (MonadIO m) => MonadIO (Pledge m zs ps)
+deriving newtype instance (MonadBase b m) => MonadBase b (Pledge m zs ps)
+
+-- instance (MonadIO m) => MonadIO (Pledge m zs ps) where
+--   liftIO = Pledge . liftIO
+
+-- instance MonadTrans (Pledge m zs ps)
+-- this is a problem, because m is too far in front. fixable
 
 -- | Wrap an action that requires no promises
 trivial :: m a -> Pledge m zs '[] a
