@@ -99,6 +99,7 @@ library
   exposed-modules:
     Data.Set.Singletons
     System.OpenBSD.MultiPledge
+    System.OpenBSD.MultiPledgeSkip
     System.OpenBSD.Pledge
     System.OpenBSD.Pledge.Internal
 
