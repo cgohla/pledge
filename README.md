@@ -83,3 +83,7 @@ to make your own fork, and add it to your cabal project file.
 
 Note furthermore that this design has not actually been used in a
 serious application.
+
+# Development #
+If you have nix but no access to an OpenBSD machine, there is a
+[flake](https://github.com/cgohla/obsd.nix) for that.
