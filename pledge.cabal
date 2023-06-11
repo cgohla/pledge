@@ -69,18 +69,18 @@ executable multipledge
     , containers
     , directory
     , pledge
-    , text
     , singletons
+    , text
 
   ghc-options:      -Wall
   hs-source-dirs:   examples/multipledge
   default-language: Haskell2010
 
 library
-  build-tool-depends: hsc2hs:hsc2hs -any
+  build-tool-depends: hsc2hs:hsc2hs
   default-language:   Haskell2010
   build-depends:
-    , base              >=4 && <5
+    , base               >=4 && <5
     , containers
     , directory
     , effect-monad
@@ -91,8 +91,9 @@ library
     , template-haskell
     , text
     , transformers
-    , type-level-sets
     , transformers-base
+    , type-level-sets
+    , unliftio-core
 
   ghc-options:        -Wall
   hs-source-dirs:     src

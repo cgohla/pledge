@@ -23,13 +23,15 @@ module System.OpenBSD.MultiPledge ( trivial
                                   , Pledge (..)
                                   , (System.OpenBSD.MultiPledge.>>=)
                                   , (System.OpenBSD.MultiPledge.>>)
+                                  , unpledge
                                   ) where
 
 import           Data.Set.Singletons
 import           System.OpenBSD.Pledge.Internal as I (Promise (..), pledge)
 
 import           Control.Monad.Base             (MonadBase)
-import           Control.Monad.IO.Class         (MonadIO)
+import           Control.Monad.IO.Class         ()
+import           Control.Monad.IO.Unlift
 import           Control.Monad.Trans.Class      (MonadTrans, lift)
 import qualified Data.Set                       as S
 import           Data.Singletons                (SingI, fromSing, sing)
@@ -52,6 +54,9 @@ deriving newtype instance (MonadBase b m) => MonadBase b (Pledge zs ps m)
 
 instance MonadTrans (Pledge zs ps) where
   lift = Pledge
+
+instance MonadUnliftIO (Pledge zs ps IO) where
+  withRunInIO f = Pledge $ f getAction
 
 -- | Wrap an action that requires no promises
 trivial :: m a -> Pledge zs '[] m a
@@ -90,10 +95,20 @@ trivial = Pledge
 -- call in main, afterward only pure computation can happen.
 runPledge :: forall m ps a.
              (SingI ps, MonadIO m)
-          => Pledge '[] ps m a
+          => Pledge '[ 'Stdio] ps m a
           -> m a
-runPledge (Pledge a) = do
+runPledge a = do
   _ <- pledge $ S.fromList $ fromSing $ sing @ps
-  v <- a
-  _ <- pledge $ S.fromList []
+  v <- getAction a
+  _ <- pledge $ S.fromList $ fromSing $ sing @'[ 'Stdio]
   pure v
+
+unpledge :: forall zs ps (m :: * -> *) a.
+            ( MonadIO m
+            , Applicative m
+            , SingI zs
+            , SingI ps
+            , ps ~ ps `Union` ps
+            )
+         => Pledge (zs `Union` ps) ps m a -> Pledge zs ps m a
+unpledge a = a System.OpenBSD.MultiPledge.>>= (pure :: a -> Pledge zs ps m a)
