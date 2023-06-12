@@ -36,6 +36,12 @@ run pledge before every elementary action, and thus incrementally
 decrease promises, always shrinking it to the set needed by the rest
 of the program.
 
+See
+[multipledge](https://github.com/cgohla/pledge/blob/main/examples/multipledge/Main.hs)
+for a simple usage example. Note how after lifting some functions, the
+`do` blocks look very ordinary, and all the additional information is
+in the type signatures.
+
 # Examples #
 
 [Examples](https://github.com/cgohla/pledge/tree/main/examples)
@@ -44,9 +50,8 @@ different prototypes.
 
 # Outlook #
 
-A goal that is not implemented so far, is to drop promises not just
-once, at the beginning of program execution, but instead, drop a
-promise as soon as we know it will not be needed during execution.
+Among other things we still need to study what to do in a
+multithreaded environment; and how to deal with inversion of control.
 
 # Caveats #
 All uses of `IO` need to be lifted to the `Pledge` type. This presents
