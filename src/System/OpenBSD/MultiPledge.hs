@@ -87,7 +87,7 @@ trivial = Pledge
      => Pledge (zs `Union` ps) qs m a
      -> Pledge zs ps m b
      -> Pledge zs (ps `Union` qs) m b
-(>>) a a' = a System.OpenBSD.MultiPledge.>>= (const a')
+(>>) a a' = a System.OpenBSD.MultiPledge.>>= const a'
 
 -- | Run the pledged action after shrinking the promise set to
 -- 'ps'. Note how we are forcing the 'zs' parameter to '[]'. After
