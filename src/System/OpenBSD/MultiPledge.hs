@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveTraversable          #-}
 {-# LANGUAGE DerivingStrategies         #-}
@@ -24,6 +25,8 @@ module System.OpenBSD.MultiPledge ( trivial
                                   , (System.OpenBSD.MultiPledge.>>=)
                                   , (System.OpenBSD.MultiPledge.>>)
                                   , unpledge
+                                  , transPledge
+                                  , transPledge'
                                   ) where
 
 import           Data.Set.Singletons
@@ -34,7 +37,7 @@ import           Control.Monad.IO.Class         ()
 import           Control.Monad.IO.Unlift
 import           Control.Monad.Trans.Class      (MonadTrans, lift)
 import qualified Data.Set                       as S
-import           Data.Singletons                (SingI, fromSing, sing)
+import           Data.Singletons                (SingI, fromSing, sing, Sing)
 
 -- | The wrapper for 'IO' actions
 newtype Pledge
@@ -82,8 +85,8 @@ trivial = Pledge
   getAction $ f a'
 
 (>>) :: forall zs ps m qs a b.
-        ( MonadIO m, SingI zs, SingI ps, SingI qs
-        )
+        ( MonadIO m, SingI zs, SingI ps
+        , SingI qs)
      => Pledge (zs `Union` ps) qs m a
      -> Pledge zs ps m b
      -> Pledge zs (ps `Union` qs) m b
@@ -112,3 +115,10 @@ unpledge :: forall zs ps (m :: * -> *) a.
             )
          => Pledge (zs `Union` ps) ps m a -> Pledge zs ps m a
 unpledge a = a System.OpenBSD.MultiPledge.>>= (pure :: a -> Pledge zs ps m a)
+
+transPledge :: Sing ps -> Pledge (zs `Union` ps) qs m a -> Pledge zs (ps `Union` qs) m a
+transPledge = undefined
+
+transPledge' :: (SingI ps, SingI (zs `Union` ps))
+             => Pledge (zs `Union` ps) qs m a -> Pledge zs (ps `Union` qs) m a
+transPledge' = Pledge . getAction
