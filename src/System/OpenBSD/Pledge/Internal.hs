@@ -1,4 +1,3 @@
-
 module System.OpenBSD.Pledge.Internal (Promise(..), pledge) where
 
 import           System.OpenBSD.Pledge.Promise.Type (Promise (..),

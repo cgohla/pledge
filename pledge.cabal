@@ -102,5 +102,6 @@ library
     System.OpenBSD.MultiPledge
     System.OpenBSD.Pledge
     System.OpenBSD.Pledge.Internal
+    System.OpenBSD.Pledge.Promise.Type
 
-  other-modules:      System.OpenBSD.Pledge.Promise.Type
+  other-modules:
