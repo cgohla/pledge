@@ -25,12 +25,14 @@ module System.OpenBSD.MultiPledge ( trivial
                                   , (System.OpenBSD.MultiPledge.>>)
                                   , unpledge
                                   , runInPledge
+                                  , fail
                                   ) where
 
 import           Data.Set.Singletons
 import           System.OpenBSD.Pledge.Internal as I (Promise (..), pledge)
 
 import           Control.Monad.Base             (MonadBase)
+import           Control.Monad.Fail as Fail
 import           Control.Monad.IO.Class         ()
 import           Control.Monad.IO.Unlift
 import           Control.Monad.Trans.Class      (MonadTrans, lift)
@@ -52,6 +54,7 @@ deriving newtype instance (Monad m) => Monad (Pledge zs ps m)
 deriving newtype instance (Applicative m) => Applicative (Pledge zs ps m)
 deriving newtype instance (MonadIO m) => MonadIO (Pledge zs ps m)
 deriving newtype instance (MonadBase b m) => MonadBase b (Pledge zs ps m)
+deriving newtype instance (Fail.MonadFail m) => Fail.MonadFail (Pledge zs ps m)
 
 instance MonadTrans (Pledge zs ps) where
   lift = Pledge
