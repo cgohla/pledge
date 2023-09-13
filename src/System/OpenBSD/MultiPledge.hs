@@ -24,6 +24,7 @@ module System.OpenBSD.MultiPledge ( trivial
                                   , (System.OpenBSD.MultiPledge.>>=)
                                   , (System.OpenBSD.MultiPledge.>>)
                                   , unpledge
+                                  , runInPledge
                                   ) where
 
 import           Data.Set.Singletons
@@ -102,6 +103,11 @@ runPledge a = do
   v <- getAction a
   _ <- pledge $ S.fromList $ fromSing $ sing @'[ 'Stdio]
   pure v
+
+-- | Run a function underneath the Pledge wrapper. Care must be taken
+-- not to actually excute privileged action here.
+runInPledge :: (m a -> m b) -> Pledge zs ps m a -> Pledge zs ps m b
+runInPledge f = Pledge . f . getAction
 
 unpledge :: forall zs ps (m :: * -> *) a.
             ( MonadIO m
